@@ -385,6 +385,11 @@ app.post('/api/dashcams/:deviceId/command', (req, res) => {
   // ... rest of the function ...
 });
 
+// Dummy events endpoint to prevent dashboard errors
+app.get('/api/events', (req, res) => {
+  res.json([]);
+});
+
 // Start server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
