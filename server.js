@@ -387,7 +387,7 @@ app.post('/api/dashcams/:deviceId/command', (req, res) => {
 
 // Dummy events endpoint to prevent dashboard errors
 app.get('/api/events', (req, res) => {
-  res.json([]);
+  res.json({ events: [] });
 });
 
 // Start server
