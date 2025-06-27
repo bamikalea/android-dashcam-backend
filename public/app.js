@@ -687,6 +687,7 @@ window.playVideo = playVideo;
 window.playAudio = playAudio;
 window.downloadVideo = downloadVideo;
 window.downloadAudio = downloadAudio;
+window.requestLocation = requestLocation;
 
 async function pollUpdates() {
     try {
