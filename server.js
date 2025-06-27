@@ -384,3 +384,13 @@ app.post('/api/dashcams/:deviceId/command', (req, res) => {
   }
   // ... rest of the function ...
 });
+
+// Start server
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  logger.info(`Fleet Management Server running on port ${PORT}`);
+  console.log(`🚗 Fleet Management Server running on http://localhost:${PORT}`);
+  console.log(`📊 Dashboard available at: http://localhost:${PORT}`);
+  console.log(`🔌 API endpoints available at: http://localhost:${PORT}/api`);
+  console.log(`📡 Socket.IO endpoint: http://localhost:${PORT}`);
+});
