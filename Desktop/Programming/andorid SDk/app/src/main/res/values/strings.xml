@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fleet Management</string>
+    <string name="service_running">Fleet Management Service Running</string>
+    <string name="location_tracking">Location Tracking Active</string>
+    <string name="dashcam_monitoring">Dashcam Monitoring Active</string>
+</resources> 

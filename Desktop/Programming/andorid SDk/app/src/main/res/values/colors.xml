@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors -->
+    <color name="primary">#1976D2</color>
+    <color name="primary_dark">#1565C0</color>
+    <color name="primary_light">#BBDEFB</color>
+    <color name="accent">#FF5722</color>
+    
+    <!-- Background Colors -->
+    <color name="background_dark">#121212</color>
+    <color name="background_light">#FFFFFF</color>
+    <color name="status_panel_bg">#1E1E1E</color>
+    <color name="control_panel_bg">#2D2D2D</color>
+    <color name="action_panel_bg">#3D3D3D</color>
+    <color name="log_bg">#0A0A0A</color>
+    
+    <!-- Text Colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B3FFFFFF</color>
+    <color name="text_disabled">#80FFFFFF</color>
+    <color name="log_text">#00FF00</color>
+    
+    <!-- Status Colors -->
+    <color name="status_success">#4CAF50</color>
+    <color name="status_warning">#FF9800</color>
+    <color name="status_error">#F44336</color>
+    <color name="status_info">#2196F3</color>
+    
+    <!-- Button Colors -->
+    <color name="button_primary_bg">#1976D2</color>
+    <color name="button_secondary_bg">#424242</color>
+    <color name="button_emergency_bg">#D32F2F</color>
+    <color name="button_settings_bg">#616161</color>
+    <color name="button_disabled_bg">#757575</color>
+    
+    <!-- Emergency Colors -->
+    <color name="emergency_red">#D32F2F</color>
+    <color name="emergency_orange">#FF5722</color>
+    <color name="emergency_yellow">#FFC107</color>
+    
+    <!-- System Colors -->
+    <color name="transparent">#00000000</color>
+    <color name="semi_transparent">#80000000</color>
+</resources> 
