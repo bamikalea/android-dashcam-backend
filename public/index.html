@@ -318,36 +318,6 @@
             </div>
         </div>
 
-        <div class="dashboard-grid">
-            <div class="card">
-                <h2>📍 Live Map</h2>
-                <div class="map-container">
-                    <div id="map"></div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h2>📱 Connected Devices</h2>
-                <div class="device-list" id="deviceList">
-                    <div class="loading">Loading devices...</div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h2>📊 Activity Chart</h2>
-                <div class="chart-container">
-                    <canvas id="activityChart"></canvas>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h2>📋 Recent Events</h2>
-                <div class="event-list" id="eventList">
-                    <div class="loading">Loading events...</div>
-                </div>
-            </div>
-        </div>
-
         <div class="card">
             <h2>🎮 Command Center</h2>
             <div class="command-panel">
@@ -378,6 +348,36 @@
                 <div style="margin-top: 20px;">
                     <button class="command-btn" onclick="requestLocation(document.getElementById('deviceSelect').value)">Get Location</button>
                     <div id="location-result" style="margin-top: 10px; font-weight: bold;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <h2>📍 Live Map</h2>
+                <div class="map-container">
+                    <div id="map"></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📱 Connected Devices</h2>
+                <div class="device-list" id="deviceList">
+                    <div class="loading">Loading devices...</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📊 Activity Chart</h2>
+                <div class="chart-container">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📋 Recent Events</h2>
+                <div class="event-list" id="eventList">
+                    <div class="loading">Loading events...</div>
                 </div>
             </div>
         </div>
