@@ -720,4 +720,32 @@ async function pollUpdates() {
         updateServerStatus(false);
         addLogEntry('Polling error: ' + error.message, 'event-system');
     }
+}
+
+// --- Location Command Integration ---
+function requestLocation(deviceId) {
+    if (!deviceId) {
+        alert('Please select a dashcam first');
+        return;
+    }
+    if (window.socket) {
+        window.socket.emit('get_location', { deviceId });
+    } else {
+        alert('Socket not connected');
+    }
+}
+
+// Listen for location_response from server
+if (typeof io !== 'undefined') {
+    window.socket = io();
+    window.socket.on('location_response', function(data) {
+        if (data && data.deviceId && data.location) {
+            const el = document.getElementById('location-result');
+            if (el) {
+                el.innerText = `Device ${data.deviceId} location: Lat ${data.location.latitude}, Lng ${data.location.longitude}`;
+            } else {
+                alert(`Device ${data.deviceId} location: Lat ${data.location.latitude}, Lng ${data.location.longitude}`);
+            }
+        }
+    });
 } 

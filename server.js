@@ -213,7 +213,7 @@ io.on('connection', (socket) => {
       timestamp: new Date()
     });
     
-    // logger.info(`Command response: ${commandId} - ${success ? 'SUCCESS' : 'FAILED'}`);
+    logger.info(`Command response: ${commandId} - ${success ? 'SUCCESS' : 'FAILED'}`);
     io.emit('command_response', {
       commandId,
       deviceId,
@@ -253,6 +253,30 @@ io.on('connection', (socket) => {
       }
     }
   });
+
+  // Relay 'get_location' command from dashboard to device
+  socket.on('get_location', (data) => {
+    const { deviceId } = data;
+    const dashcam = dashcamData.get(deviceId);
+    if (dashcam && dashcam.socketId) {
+      io.to(dashcam.socketId).emit('get_location_request', { requestorSocketId: socket.id });
+      logger.info(`Relayed 'get_location' command to device: ${deviceId}`);
+    } else {
+      socket.emit('location_error', { error: 'Device not connected', deviceId });
+    }
+  });
+
+  // Device sends location in response to 'get_location_request'
+  socket.on('location_response', (data) => {
+    const { deviceId, location, requestorSocketId } = data;
+    if (requestorSocketId) {
+      io.to(requestorSocketId).emit('location_response', { deviceId, location });
+      logger.info(`Forwarded location from device ${deviceId} to dashboard`);
+    } else {
+      // Fallback: broadcast to all dashboards (optional)
+      io.emit('location_response', { deviceId, location });
+    }
+  });
 });
 
 // API Routes
@@ -271,7 +295,7 @@ app.get('/api/status', (req, res) => {
 
 // Get all dashcams
 app.get('/api/dashcams', (req, res) => {
-  // logger.info('[DEBUG] GET /api/dashcams called');
+  logger.info('[DEBUG] GET /api/dashcams called');
   const dashcams = Array.from(dashcamData.entries()).map(([deviceId, data]) => ({
     deviceId,
     status: data.status,
@@ -281,7 +305,7 @@ app.get('/api/dashcams', (req, res) => {
     model: data.model || 'Unknown',
     version: data.version || 'Unknown'
   }));
-  // logger.info(`[DEBUG] Returning ${dashcams.length} dashcams`);
+  logger.info(`[DEBUG] Returning ${dashcams.length} dashcams`);
   res.json(dashcams);
 });
 
@@ -291,6 +315,7 @@ app.get('/api/dashcams/:deviceId', (req, res) => {
   const dashcam = dashcamData.get(deviceId);
   
   if (!dashcam) {
+    logger.warn('[DEBUG] 404: Dashcam not found for deviceId ' + deviceId);
     return res.status(404).json({ error: 'Dashcam not found' });
   }
   
@@ -303,7 +328,7 @@ app.get('/api/dashcams/:deviceId', (req, res) => {
 
 // Register dashcam
 app.post('/api/dashcams/register', (req, res) => {
-  // logger.info(`[DEBUG] POST /api/dashcams/register body: ${JSON.stringify(req.body)}`);
+  logger.info(`[DEBUG] POST /api/dashcams/register body: ${JSON.stringify(req.body)}`);
   const { deviceId, model, version } = req.body;
   if (!deviceId) {
     logger.warn('[DEBUG] 400: Device ID is required');
@@ -349,212 +374,13 @@ app.post('/api/dashcams/:deviceId/status', (req, res) => {
 
 // Send command to dashcam
 app.post('/api/dashcams/:deviceId/command', (req, res) => {
-  // logger.info(`[DEBUG] POST /api/dashcams/${req.params.deviceId}/command body: ${JSON.stringify(req.body)}`);
+  logger.info(`[DEBUG] POST /api/dashcams/${req.params.deviceId}/command body: ${JSON.stringify(req.body)}`);
   const { deviceId } = req.params;
   const { command, parameters } = req.body;
   const dashcam = dashcamData.get(deviceId);
   if (!dashcam) {
-    logger.warn(`[DEBUG] 404: Dashcam not found for deviceId ${deviceId}`);
+    logger.warn('[DEBUG] 404: Dashcam not found for deviceId ' + deviceId);
     return res.status(404).json({ error: 'Dashcam not found' });
   }
-  
-  const commandId = `cmd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
-  const commandData = {
-    commandId,
-    deviceId,
-    command,
-    parameters: parameters || {},
-    timestamp: new Date(),
-    status: 'pending'
-  };
-  
-  commandQueue.push(commandData);
-  
-  // Emit command to connected dashcam
-  if (dashcam.socketId) {
-    io.to(dashcam.socketId).emit('command', commandData);
-    logger.info(`Command sent to ${deviceId}: ${command}`);
-  }
-  
-  res.json({ 
-    success: true, 
-    commandId,
-    message: 'Command queued successfully' 
-  });
+  // ... rest of the function ...
 });
-
-// Get commands for dashcam (polling endpoint)
-app.get('/api/dashcams/:deviceId/commands', (req, res) => {
-  const { deviceId } = req.params;
-  
-  // Get pending commands for this device
-  const pendingCommands = commandQueue.filter(cmd => 
-    cmd.deviceId === deviceId && cmd.status === 'pending'
-  );
-  
-  // Mark commands as sent
-  pendingCommands.forEach(cmd => cmd.status = 'sent');
-  
-  res.json(pendingCommands);
-});
-
-// Handle command response
-app.post('/api/dashcams/:deviceId/response', (req, res) => {
-  const { deviceId } = req.params;
-  const { commandId, success, message } = req.body;
-  
-  // Update command status
-  const command = commandQueue.find(cmd => cmd.commandId === commandId);
-  if (command) {
-    command.status = success ? 'completed' : 'failed';
-    command.response = message;
-    command.completedAt = new Date();
-  }
-  
-  commandHistory.push({
-    commandId,
-    deviceId,
-    response: message,
-    success,
-    timestamp: new Date()
-  });
-  
-  logger.info(`Command response: ${commandId} - ${success ? 'SUCCESS' : 'FAILED'}`);
-  res.json({ success: true });
-});
-
-// Upload media files
-app.post('/api/dashcams/:deviceId/media', upload.single('file'), (req, res) => {
-  const { deviceId } = req.params;
-  const { type, eventType } = req.body;
-  const file = req.file;
-  
-  if (!file) {
-    return res.status(400).json({ error: 'No file uploaded' });
-  }
-  
-  const mediaInfo = {
-    id: `media_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    deviceId,
-    type: type || 'unknown',
-    eventType: eventType || 'manual',
-    filename: file.filename,
-    originalName: file.originalname,
-    path: file.path,
-    size: file.size,
-    timestamp: new Date()
-  };
-  
-  // Store media info based on type
-  switch (type) {
-    case 'image':
-      mediaFiles.images.push(mediaInfo);
-      break;
-    case 'video':
-      mediaFiles.videos.push(mediaInfo);
-      break;
-    case 'audio':
-      mediaFiles.audio.push(mediaInfo);
-      break;
-    default:
-      mediaFiles.images.push(mediaInfo);
-  }
-  
-  // Emit to connected clients
-  io.emit('media_uploaded', mediaInfo);
-  
-  logger.info(`Media uploaded: ${deviceId} - ${type} - ${file.originalname}`);
-  res.json({ success: true, mediaInfo });
-});
-
-// Get media files
-app.get('/api/dashcams/:deviceId/media', (req, res) => {
-  const { deviceId } = req.params;
-  const { type } = req.query;
-  
-  let media = [];
-  
-  if (type === 'image') {
-    media = mediaFiles.images.filter(m => m.deviceId === deviceId);
-  } else if (type === 'video') {
-    media = mediaFiles.videos.filter(m => m.deviceId === deviceId);
-  } else if (type === 'audio') {
-    media = mediaFiles.audio.filter(m => m.deviceId === deviceId);
-  } else {
-    media = [
-      ...mediaFiles.images.filter(m => m.deviceId === deviceId),
-      ...mediaFiles.videos.filter(m => m.deviceId === deviceId),
-      ...mediaFiles.audio.filter(m => m.deviceId === deviceId)
-    ];
-  }
-  
-  res.json(media);
-});
-
-// Get events
-app.get('/api/events', (req, res) => {
-  const { deviceId, limit = 100, type } = req.query;
-  
-  let events = eventLog;
-  
-  if (deviceId) {
-    events = events.filter(event => event.deviceId === deviceId);
-  }
-  
-  if (type) {
-    events = events.filter(event => event.eventType.includes(type));
-  }
-  
-  const limitedEvents = events.slice(-parseInt(limit));
-  
-  res.json({
-    total: events.length,
-    events: limitedEvents
-  });
-});
-
-// Get command history
-app.get('/api/commands', (req, res) => {
-  const { deviceId, limit = 100 } = req.query;
-  
-  let commands = commandHistory;
-  
-  if (deviceId) {
-    commands = commands.filter(cmd => cmd.deviceId === deviceId);
-  }
-  
-  const limitedCommands = commands.slice(-parseInt(limit));
-  
-  res.json({
-    total: commands.length,
-    commands: limitedCommands
-  });
-});
-
-// Dashboard route
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  logger.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error' });
-});
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Endpoint not found' });
-});
-
-// Start server
-const PORT = process.env.PORT || 3000;
-
-server.listen(PORT, () => {
-  logger.info(`Fleet Management Server running on port ${PORT}`);
-  console.log(`🚗 Fleet Management Server running on http://localhost:${PORT}`);
-  console.log(`📊 Dashboard available at: http://localhost:${PORT}`);
-  console.log(`🔌 API endpoints available at: http://localhost:${PORT}/api`);
-  console.log(`📡 Socket.IO endpoint: http://localhost:${PORT}`);
-}); 

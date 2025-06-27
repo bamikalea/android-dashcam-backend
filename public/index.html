@@ -101,7 +101,7 @@
             height: 500px;
             position: relative;
         }
-
+        
         #map {
             height: 100%;
             border-radius: 15px;
@@ -296,8 +296,8 @@
         <div class="header">
             <h1>
                 <span class="real-time-indicator"></span>
-                Fleet Management Dashboard
-            </h1>
+                    Fleet Management Dashboard
+                </h1>
             <div class="status">
                 <div class="status-item">
                     <div class="status-number" id="totalDevices">0</div>
@@ -306,7 +306,7 @@
                 <div class="status-item">
                     <div class="status-number" id="onlineDevices">0</div>
                     <div class="status-label">Online</div>
-                </div>
+            </div>
                 <div class="status-item">
                     <div class="status-number" id="totalEvents">0</div>
                     <div class="status-label">Events Today</div>
@@ -325,21 +325,21 @@
                     <div id="map"></div>
                 </div>
             </div>
-
+            
             <div class="card">
                 <h2>📱 Connected Devices</h2>
                 <div class="device-list" id="deviceList">
                     <div class="loading">Loading devices...</div>
                 </div>
             </div>
-
+            
             <div class="card">
                 <h2>📊 Activity Chart</h2>
                 <div class="chart-container">
                     <canvas id="activityChart"></canvas>
                 </div>
             </div>
-
+            
             <div class="card">
                 <h2>📋 Recent Events</h2>
                 <div class="event-list" id="eventList">
@@ -374,6 +374,10 @@
                         <input type="text" id="customCommand" class="command-input" placeholder="Enter custom command...">
                     </div>
                     <button id="sendCommand" class="command-btn">Send Command</button>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button class="command-btn" onclick="requestLocation(document.getElementById('deviceSelect').value)">Get Location</button>
+                    <div id="location-result" style="margin-top: 10px; font-weight: bold;"></div>
                 </div>
             </div>
         </div>

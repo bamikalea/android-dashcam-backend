@@ -19,7 +19,7 @@
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
-    "socket.io": "^2.4.1",
+    "socket.io": "2.4.1",
     "cors": "^2.8.5",
     "helmet": "^7.0.0",
     "express-rate-limit": "^6.7.0",
