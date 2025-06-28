@@ -335,7 +335,7 @@ public class ServerCommunicationService extends Service {
                 executorService.execute(new Runnable() {
                     @Override
                     public void run() {
-                        sendStatus();
+                        sendStatus(null);
                     }
                 });
             }
@@ -372,7 +372,8 @@ public class ServerCommunicationService extends Service {
             Log.d(TAG, "Sending GET request to: " + url);
 
             try (Response response = client.newCall(request).execute()) {
-                Log.d(TAG, "Response received - Code: " + response.code());
+                Log.d(TAG, "=== COMMAND POLLING RESPONSE ===");
+                Log.d(TAG, "Response Code: " + response.code());
                 Log.d(TAG, "Response Headers: " + response.headers());
 
                 if (response.isSuccessful()) {
@@ -380,18 +381,21 @@ public class ServerCommunicationService extends Service {
                     Log.d(TAG, "Response Body: " + responseBody);
 
                     if (responseBody != null && !responseBody.trim().isEmpty()) {
+                        Log.i(TAG, "=== COMMANDS RECEIVED ===");
                         Log.i(TAG, "Commands received from server: " + responseBody);
                         executeCommands(responseBody);
                     } else {
-                        Log.d(TAG, "No commands received from server");
+                        Log.d(TAG, "No commands received from server (empty response)");
                     }
                 } else {
+                    Log.w(TAG, "=== COMMAND POLLING ERROR ===");
                     Log.w(TAG, "Server returned error code: " + response.code());
                     String errorBody = response.body().string();
                     Log.w(TAG, "Error response: " + errorBody);
                 }
             }
         } catch (Exception e) {
+            Log.e(TAG, "=== COMMAND POLLING EXCEPTION ===");
             Log.e(TAG, "Error polling for commands", e);
             Log.e(TAG, "Exception details: " + e.getMessage());
             e.printStackTrace();
@@ -400,147 +404,187 @@ public class ServerCommunicationService extends Service {
 
     private void executeCommands(String commandsJson) {
         try {
-            Log.i(TAG, "Executing commands: " + commandsJson);
+            Log.i(TAG, "=== EXECUTING COMMANDS ===");
+            Log.i(TAG, "Commands JSON: " + commandsJson);
 
             // Try to handle both {"commands": [...]} and raw array [...]
             JSONArray commandsArray = null;
             if (commandsJson.trim().startsWith("{")) {
+                Log.d(TAG, "Parsing JSON object format");
                 JSONObject obj = new JSONObject(commandsJson);
                 if (obj.has("commands")) {
                     commandsArray = obj.getJSONArray("commands");
+                    Log.d(TAG, "Found commands array with " + commandsArray.length() + " commands");
+                } else {
+                    Log.w(TAG, "JSON object does not contain 'commands' field");
                 }
             } else if (commandsJson.trim().startsWith("[")) {
+                Log.d(TAG, "Parsing JSON array format");
                 commandsArray = new JSONArray(commandsJson);
+                Log.d(TAG, "Found direct array with " + commandsArray.length() + " commands");
+            } else {
+                Log.w(TAG, "Unknown JSON format: " + commandsJson);
             }
 
-            if (commandsArray != null) {
+            if (commandsArray != null && commandsArray.length() > 0) {
+                Log.i(TAG, "=== PROCESSING " + commandsArray.length() + " COMMANDS ===");
                 for (int i = 0; i < commandsArray.length(); i++) {
                     JSONObject commandObj = commandsArray.getJSONObject(i);
                     String command = commandObj.optString("command");
                     String commandId = commandObj.has("id") ? commandObj.getString("id")
                             : commandObj.optString("commandId", null);
 
-                    Log.i(TAG, "Executing command: " + command + " (ID: " + commandId + ")");
+                    Log.i(TAG, "=== EXECUTING COMMAND " + (i + 1) + " ===");
+                    Log.i(TAG, "Command: " + command + " (ID: " + commandId + ")");
+                    Log.i(TAG, "Command object: " + commandObj.toString());
 
                     switch (command) {
                         case "takePhoto":
                         case "capture_photo":
+                            Log.i(TAG, "Executing capture_photo command");
                             capturePhoto(commandId);
                             break;
                         case "startLiveStream":
                         case "start_live_stream":
+                            Log.i(TAG, "Executing start_live_stream command");
                             startLiveStream();
                             break;
                         case "stopLiveStream":
                         case "stop_live_stream":
+                            Log.i(TAG, "Executing stop_live_stream command");
                             stopLiveStream();
                             break;
                         case "startRecording":
                         case "start_video_recording":
-                            startRecording();
+                            Log.i(TAG, "Executing start_video_recording command");
+                            startRecording(commandId);
                             break;
                         case "stopRecording":
                         case "stop_video_recording":
+                            Log.i(TAG, "Executing stop_video_recording command");
                             stopRecording();
                             break;
                         case "getStatus":
                         case "get_device_info":
-                            sendStatus();
+                            Log.i(TAG, "Executing getStatus command");
+                            sendStatus(commandId);
                             break;
                         case "getLocation":
+                            Log.i(TAG, "Executing getLocation command");
                             getLocation();
                             break;
                         case "getHeartbeat":
+                            Log.i(TAG, "Executing getHeartbeat command");
                             sendHeartbeat();
                             break;
                         case "getAccStatus":
+                            Log.i(TAG, "Executing getAccStatus command");
                             getAccStatus();
                             break;
                         case "startAccMonitoring":
+                            Log.i(TAG, "Executing startAccMonitoring command");
                             startAccMonitoring();
                             break;
                         case "stopAccMonitoring":
+                            Log.i(TAG, "Executing stopAccMonitoring command");
                             stopAccMonitoring();
                             break;
                         case "startAudioRecording":
                         case "start_audio_recording":
+                            Log.i(TAG, "Executing start_audio_recording command");
                             startAudioRecording();
                             break;
                         case "stopAudioRecording":
                         case "stop_audio_recording":
+                            Log.i(TAG, "Executing stop_audio_recording command");
                             stopAudioRecording();
                             break;
                         case "playAudio":
+                            Log.i(TAG, "Executing playAudio command");
                             if (commandObj.has("audioData")) {
                                 playAudio(commandObj.getString("audioData"));
                             } else {
-                                sendCommandResponse(command, false, "No audio data provided");
+                                sendCommandResponse(command, false, "No audio data provided", commandId);
                             }
                             break;
                         case "playTTS":
                         case "tts_speak":
+                            Log.i(TAG, "Executing TTS command");
                             if (commandObj.has("parameters")) {
                                 JSONObject parameters = commandObj.getJSONObject("parameters");
                                 if (parameters.has("message")) {
-                                    playTTS(parameters.getString("message"));
+                                    playTTS(parameters.getString("message"), commandId);
                                 } else if (parameters.has("text")) {
-                                    playTTS(parameters.getString("text"));
+                                    playTTS(parameters.getString("text"), commandId);
                                 } else {
-                                    sendCommandResponse(command, false, "No text provided for TTS");
+                                    sendCommandResponse(command, false, "No text provided for TTS", commandId);
                                 }
                             } else if (commandObj.has("text")) {
-                                playTTS(commandObj.getString("text"));
+                                playTTS(commandObj.getString("text"), commandId);
                             } else {
-                                sendCommandResponse(command, false, "No text provided for TTS");
+                                sendCommandResponse(command, false, "No text provided for TTS", commandId);
                             }
                             break;
                         case "startTwoWayAudio":
                         case "start_two_way_audio":
+                            Log.i(TAG, "Executing start_two_way_audio command");
                             startTwoWayAudio();
                             break;
                         case "stopTwoWayAudio":
                         case "stop_two_way_audio":
+                            Log.i(TAG, "Executing stop_two_way_audio command");
                             stopTwoWayAudio();
                             break;
                         case "restart_app":
+                            Log.i(TAG, "Executing restart_app command");
                             // Implement app restart logic if needed
                             break;
                         case "clear_apn_proxy":
+                            Log.i(TAG, "Executing clear_apn_proxy command");
                             clearApnProxySettings();
                             break;
                         case "test_emergency_alert":
                         case "test_overspeed_alert":
                         case "test_fatigue_alert":
+                            Log.i(TAG, "Executing alert test command: " + command);
                             // Implement alert test logic if needed
                             break;
                         default:
                             Log.w(TAG, "Unknown command: " + command);
-                            sendCommandResponse(command, false, "Unknown command: " + command);
+                            sendCommandResponse(command, false, "Unknown command: " + command, commandId);
                             break;
                     }
                 }
             } else {
+                Log.d(TAG, "No commands to execute (empty array or null)");
                 // Fallback for simple string matching
                 if (commandsJson.contains("takePhoto")) {
+                    Log.i(TAG, "Fallback: executing takePhoto");
                     capturePhoto(null);
                 }
                 if (commandsJson.contains("startLiveStream")) {
+                    Log.i(TAG, "Fallback: executing startLiveStream");
                     startLiveStream();
                 }
                 if (commandsJson.contains("stopLiveStream")) {
+                    Log.i(TAG, "Fallback: executing stopLiveStream");
                     stopLiveStream();
                 }
                 if (commandsJson.contains("startRecording")) {
-                    startRecording();
+                    Log.i(TAG, "Fallback: executing startRecording");
+                    startRecording(null);
                 }
                 if (commandsJson.contains("stopRecording")) {
+                    Log.i(TAG, "Fallback: executing stopRecording");
                     stopRecording();
                 }
                 if (commandsJson.contains("getStatus")) {
-                    sendStatus();
+                    Log.i(TAG, "Fallback: executing getStatus");
+                    sendStatus(null);
                 }
             }
         } catch (Exception e) {
+            Log.e(TAG, "=== COMMAND EXECUTION ERROR ===");
             Log.e(TAG, "Error executing commands: " + e.getMessage(), e);
         }
     }
@@ -611,7 +655,7 @@ public class ServerCommunicationService extends Service {
         });
     }
 
-    private void sendStatus() {
+    private void sendStatus(String commandId) {
         try {
             Log.d(TAG, "=== SENDING STATUS ===");
             Log.d(TAG, "Device ID: " + deviceId);
@@ -659,11 +703,21 @@ public class ServerCommunicationService extends Service {
                     String responseBody = response.body().string();
                     Log.i(TAG, "=== STATUS SENT SUCCESS ===");
                     Log.i(TAG, "Response: " + responseBody);
+
+                    // If this was called as a command, send a command response
+                    if (commandId != null) {
+                        sendCommandResponse("getStatus", true, "Status sent successfully", commandId);
+                    }
                 } else {
                     String errorBody = response.body().string();
                     Log.w(TAG, "=== STATUS SENT FAILED ===");
                     Log.w(TAG, "Error code: " + response.code());
                     Log.w(TAG, "Error response: " + errorBody);
+
+                    // If this was called as a command, send a command response
+                    if (commandId != null) {
+                        sendCommandResponse("getStatus", false, "Status send failed: " + response.code(), commandId);
+                    }
                 }
             }
         } catch (Exception e) {
@@ -725,21 +779,21 @@ public class ServerCommunicationService extends Service {
                                             Log.i(TAG, "Photo file exists, uploading to server...");
                                             uploadPhoto(photoFile, commandId != null ? commandId : "remote_command");
                                             sendCommandResponse("takePhoto", true,
-                                                    "Photo captured and uploaded successfully");
+                                                    "Photo captured and uploaded successfully", commandId);
                                         } else {
                                             Log.e(TAG, "Photo file does not exist at path: " + photoPath);
                                             sendCommandResponse("takePhoto", false,
-                                                    "Photo captured but file not found: " + photoPath);
+                                                    "Photo captured but file not found: " + photoPath, commandId);
                                         }
                                     } else {
                                         Log.w(TAG, "No imgurl in photo result: " + result);
                                         sendCommandResponse("takePhoto", false,
-                                                "Photo captured but no file path returned");
+                                                "Photo captured but no file path returned", commandId);
                                     }
                                 } catch (JSONException e) {
                                     Log.e(TAG, "Error parsing photo result JSON", e);
                                     sendCommandResponse("takePhoto", false,
-                                            "Error parsing photo result: " + e.getMessage());
+                                            "Error parsing photo result: " + e.getMessage(), commandId);
                                 }
                             }
 
@@ -812,16 +866,16 @@ public class ServerCommunicationService extends Service {
 
             // Upload the placeholder photo
             uploadPhoto(photoFile, "remote_command_fallback");
-            sendCommandResponse("takePhoto", true, "Fallback photo captured and uploaded successfully");
+            sendCommandResponse("takePhoto", true, "Fallback photo captured and uploaded successfully", commandId);
 
         } catch (Exception e) {
             Log.e(TAG, "=== FALLBACK PHOTO CAPTURE FAILED ===");
             Log.e(TAG, "Fallback photo capture error: " + e.getMessage(), e);
-            sendCommandResponse("takePhoto", false, "Fallback photo capture failed: " + e.getMessage());
+            sendCommandResponse("takePhoto", false, "Fallback photo capture failed: " + e.getMessage(), commandId);
         }
     }
 
-    private void startRecording() {
+    private void startRecording(String commandId) {
         Log.i(TAG, "=== STARTING VIDEO RECORDING ===");
 
         try {
@@ -851,21 +905,21 @@ public class ServerCommunicationService extends Service {
                                             Log.i(TAG, "Video file exists, uploading to server...");
                                             uploadVideo(videoFile, "remote_recording");
                                             sendCommandResponse("startRecording", true,
-                                                    "Video recorded and uploaded successfully");
+                                                    "Video recorded and uploaded successfully", commandId);
                                         } else {
                                             Log.e(TAG, "Video file does not exist at path: " + videoPath);
                                             sendCommandResponse("startRecording", false,
-                                                    "Video recorded but file not found: " + videoPath);
+                                                    "Video recorded but file not found: " + videoPath, commandId);
                                         }
                                     } else {
                                         Log.w(TAG, "No videourl in recording result: " + result);
                                         sendCommandResponse("startRecording", false,
-                                                "Video recorded but no file path returned");
+                                                "Video recorded but no file path returned", commandId);
                                     }
                                 } catch (JSONException e) {
                                     Log.e(TAG, "Error parsing recording result JSON", e);
                                     sendCommandResponse("startRecording", false,
-                                            "Error parsing recording result: " + e.getMessage());
+                                            "Error parsing recording result: " + e.getMessage(), commandId);
                                 }
                             }
 
@@ -873,21 +927,21 @@ public class ServerCommunicationService extends Service {
                             public void onError(String error) {
                                 Log.e(TAG, "HardwareControlService recording failed: " + error);
                                 // Fallback to direct Car SDK
-                                startRecordingWithCarSDK();
+                                startRecordingWithCarSDK(commandId);
                             }
                         });
             } else {
                 Log.w(TAG, "HardwareControlService not available, using direct Car SDK...");
-                startRecordingWithCarSDK();
+                startRecordingWithCarSDK(commandId);
             }
 
         } catch (Exception e) {
             Log.e(TAG, "Video recording failed: " + e.getMessage(), e);
-            sendCommandResponse("startRecording", false, "Recording failed: " + e.getMessage());
+            sendCommandResponse("startRecording", false, "Recording failed: " + e.getMessage(), commandId);
         }
     }
 
-    private void startRecordingWithCarSDK() {
+    private void startRecordingWithCarSDK(String commandId) {
         try {
             Log.i(TAG, "Using Car SDK directly for recording...");
             carassist.cn.API carApi = new carassist.cn.API(this);
@@ -914,27 +968,29 @@ public class ServerCommunicationService extends Service {
                             if (videoFile.exists()) {
                                 Log.i(TAG, "Video file exists, uploading to server...");
                                 uploadVideo(videoFile, "remote_recording");
-                                sendCommandResponse("startRecording", true, "Video recorded and uploaded successfully");
+                                sendCommandResponse("startRecording", true, "Video recorded and uploaded successfully",
+                                        commandId);
                             } else {
                                 Log.e(TAG, "Video file does not exist at path: " + videoPath);
                                 sendCommandResponse("startRecording", false,
-                                        "Video recorded but file not found: " + videoPath);
+                                        "Video recorded but file not found: " + videoPath, commandId);
                             }
                         } else {
                             Log.w(TAG, "No videourl in recording result: " + jsonString);
-                            sendCommandResponse("startRecording", false, "Video recorded but no file path returned");
+                            sendCommandResponse("startRecording", false, "Video recorded but no file path returned",
+                                    commandId);
                         }
                     } catch (JSONException e) {
                         Log.e(TAG, "Error parsing recording result JSON", e);
                         sendCommandResponse("startRecording", false,
-                                "Error parsing recording result: " + e.getMessage());
+                                "Error parsing recording result: " + e.getMessage(), commandId);
                     }
                 }
             });
 
         } catch (Exception e) {
             Log.e(TAG, "Car SDK recording failed: " + e.getMessage(), e);
-            sendCommandResponse("startRecording", false, "Recording failed: " + e.getMessage());
+            sendCommandResponse("startRecording", false, "Recording failed: " + e.getMessage(), commandId);
         }
     }
 
@@ -944,7 +1000,7 @@ public class ServerCommunicationService extends Service {
         // Recording stops automatically after the specified duration
         // We can check for recently created video files and upload them
         uploadRecentVideos();
-        sendCommandResponse("stopRecording", true, "Recording stopped");
+        sendCommandResponse("stopRecording", true, "Recording stopped", null);
     }
 
     private void startLiveStream() {
@@ -983,11 +1039,11 @@ public class ServerCommunicationService extends Service {
                 }
             });
 
-            sendCommandResponse("startLiveStream", true, "Live stream started");
+            sendCommandResponse("startLiveStream", true, "Live stream started", null);
 
         } catch (Exception e) {
             Log.e(TAG, "Live stream failed: " + e.getMessage(), e);
-            sendCommandResponse("startLiveStream", false, "Live stream failed: " + e.getMessage());
+            sendCommandResponse("startLiveStream", false, "Live stream failed: " + e.getMessage(), null);
         }
     }
 
@@ -995,7 +1051,7 @@ public class ServerCommunicationService extends Service {
         Log.i(TAG, "=== STOPPING LIVE STREAM ===");
         // Stop the live stream and upload any remaining segments
         uploadRecentVideos();
-        sendCommandResponse("stopLiveStream", true, "Live stream stopped");
+        sendCommandResponse("stopLiveStream", true, "Live stream stopped", null);
     }
 
     /**
@@ -1040,10 +1096,19 @@ public class ServerCommunicationService extends Service {
         }
     }
 
+    // Overload for backward compatibility
     private void sendCommandResponse(String command, boolean success, String message) {
+        sendCommandResponse(command, success, message, null);
+    }
+
+    private void sendCommandResponse(String command, boolean success, String message, String commandId) {
         try {
             Log.d(TAG, "=== SENDING COMMAND RESPONSE ===");
             Log.d(TAG, "Device ID: " + deviceId);
+            Log.d(TAG, "Command: " + command);
+            Log.d(TAG, "Command ID: " + commandId);
+            Log.d(TAG, "Success: " + success);
+            Log.d(TAG, "Message: " + message);
             Log.d(TAG, "Server URL: " + API_BASE_URL);
 
             String endpoint = String.format("/dashcams/%s/response", deviceId);
@@ -1063,6 +1128,7 @@ public class ServerCommunicationService extends Service {
             JSONObject responseData = new JSONObject();
             responseData.put("deviceId", deviceId);
             responseData.put("command", command);
+            responseData.put("commandId", commandId);
             responseData.put("success", success);
             responseData.put("message", message);
             responseData.put("timestamp", sdf.format(new java.util.Date()));
@@ -1690,14 +1756,14 @@ public class ServerCommunicationService extends Service {
                 Log.i(TAG, "Location retrieved: " + location.getLatitude() + ", " + location.getLongitude());
                 sendLocation(location);
                 sendCommandResponse("getLocation", true,
-                        "Location retrieved: " + location.getLatitude() + ", " + location.getLongitude());
+                        "Location retrieved: " + location.getLatitude() + ", " + location.getLongitude(), null);
             } else {
                 Log.w(TAG, "No location available");
-                sendCommandResponse("getLocation", false, "No location available");
+                sendCommandResponse("getLocation", false, "No location available", null);
             }
         } else {
             Log.w(TAG, "Location service not available");
-            sendCommandResponse("getLocation", false, "Location service not available");
+            sendCommandResponse("getLocation", false, "Location service not available", null);
         }
     }
 
@@ -1712,14 +1778,14 @@ public class ServerCommunicationService extends Service {
             String status = accStatus ? "ON" : "OFF";
 
             Log.i(TAG, "ACC status: " + status);
-            sendCommandResponse("getAccStatus", true, "ACC Status: " + status);
+            sendCommandResponse("getAccStatus", true, "ACC Status: " + status, null);
 
             // Send ACC status to server
             sendAccStatusToServer(accStatus);
 
         } catch (Exception e) {
             Log.e(TAG, "Error getting ACC status: " + e.getMessage(), e);
-            sendCommandResponse("getAccStatus", false, "Error getting ACC status: " + e.getMessage());
+            sendCommandResponse("getAccStatus", false, "Error getting ACC status: " + e.getMessage(), null);
         }
     }
 
@@ -1735,11 +1801,11 @@ public class ServerCommunicationService extends Service {
             startService(accIntent);
 
             Log.i(TAG, "ACC monitoring service started");
-            sendCommandResponse("startAccMonitoring", true, "ACC monitoring started");
+            sendCommandResponse("startAccMonitoring", true, "ACC monitoring started", null);
 
         } catch (Exception e) {
             Log.e(TAG, "Error starting ACC monitoring: " + e.getMessage(), e);
-            sendCommandResponse("startAccMonitoring", false, "Error starting ACC monitoring: " + e.getMessage());
+            sendCommandResponse("startAccMonitoring", false, "Error starting ACC monitoring: " + e.getMessage(), null);
         }
     }
 
@@ -1755,11 +1821,11 @@ public class ServerCommunicationService extends Service {
             stopService(accIntent);
 
             Log.i(TAG, "ACC monitoring service stopped");
-            sendCommandResponse("stopAccMonitoring", true, "ACC monitoring stopped");
+            sendCommandResponse("stopAccMonitoring", true, "ACC monitoring stopped", null);
 
         } catch (Exception e) {
             Log.e(TAG, "Error stopping ACC monitoring: " + e.getMessage(), e);
-            sendCommandResponse("stopAccMonitoring", false, "Error stopping ACC monitoring: " + e.getMessage());
+            sendCommandResponse("stopAccMonitoring", false, "Error stopping ACC monitoring: " + e.getMessage(), null);
         }
     }
 
@@ -1913,7 +1979,7 @@ public class ServerCommunicationService extends Service {
 
         if (isRecording.get()) {
             Log.w(TAG, "Audio recording already in progress");
-            sendCommandResponse("startAudioRecording", false, "Audio recording already in progress");
+            sendCommandResponse("startAudioRecording", false, "Audio recording already in progress", null);
             return;
         }
 
@@ -1944,11 +2010,11 @@ public class ServerCommunicationService extends Service {
             isRecording.set(true);
 
             Log.i(TAG, "Audio recording started: " + audioPath);
-            sendCommandResponse("startAudioRecording", true, "Audio recording started");
+            sendCommandResponse("startAudioRecording", true, "Audio recording started", null);
 
         } catch (Exception e) {
             Log.e(TAG, "Failed to start audio recording: " + e.getMessage(), e);
-            sendCommandResponse("startAudioRecording", false, "Failed to start recording: " + e.getMessage());
+            sendCommandResponse("startAudioRecording", false, "Failed to start recording: " + e.getMessage(), null);
         }
     }
 
@@ -1960,7 +2026,7 @@ public class ServerCommunicationService extends Service {
 
         if (!isRecording.get()) {
             Log.w(TAG, "No audio recording in progress");
-            sendCommandResponse("stopAudioRecording", false, "No audio recording in progress");
+            sendCommandResponse("stopAudioRecording", false, "No audio recording in progress", null);
             return;
         }
 
@@ -1979,16 +2045,16 @@ public class ServerCommunicationService extends Service {
                 if (audioFile.exists()) {
                     Log.i(TAG, "Audio recording completed: " + audioPath);
                     uploadAudio(audioFile, "remote_recording");
-                    sendCommandResponse("stopAudioRecording", true, "Audio recording completed and uploaded");
+                    sendCommandResponse("stopAudioRecording", true, "Audio recording completed and uploaded", null);
                 } else {
                     Log.e(TAG, "Audio file not found: " + audioPath);
-                    sendCommandResponse("stopAudioRecording", false, "Audio file not found");
+                    sendCommandResponse("stopAudioRecording", false, "Audio file not found", null);
                 }
             }
 
         } catch (Exception e) {
             Log.e(TAG, "Failed to stop audio recording: " + e.getMessage(), e);
-            sendCommandResponse("stopAudioRecording", false, "Failed to stop recording: " + e.getMessage());
+            sendCommandResponse("stopAudioRecording", false, "Failed to stop recording: " + e.getMessage(), null);
         }
     }
 
@@ -2037,11 +2103,11 @@ public class ServerCommunicationService extends Service {
             });
 
             Log.i(TAG, "Audio playback started");
-            sendCommandResponse("playAudio", true, "Audio playback started");
+            sendCommandResponse("playAudio", true, "Audio playback started", null);
 
         } catch (Exception e) {
             Log.e(TAG, "Failed to play audio: " + e.getMessage(), e);
-            sendCommandResponse("playAudio", false, "Failed to play audio: " + e.getMessage());
+            sendCommandResponse("playAudio", false, "Failed to play audio: " + e.getMessage(), null);
         }
     }
 
@@ -2065,9 +2131,10 @@ public class ServerCommunicationService extends Service {
     /**
      * Play TTS (Text-to-Speech)
      */
-    private void playTTS(String text) {
+    private void playTTS(String text, String commandId) {
         Log.i(TAG, "=== PLAYING TTS ===");
         Log.i(TAG, "TTS Text: " + text);
+        Log.i(TAG, "Command ID: " + commandId);
 
         try {
             // Use Car SDK TTS if available
@@ -2075,16 +2142,16 @@ public class ServerCommunicationService extends Service {
                 carassist.cn.API carApi = new carassist.cn.API(this);
                 carApi.playTts(text, carassist.cn.API.TYPE_NOTICE);
                 Log.i(TAG, "TTS played using Car SDK");
-                sendCommandResponse("playTTS", true, "TTS played successfully");
+                sendCommandResponse("playTTS", true, "TTS played successfully", commandId);
             } else {
                 // For now, just log that TTS is not available
                 Log.w(TAG, "TTS not available - Car SDK not initialized");
-                sendCommandResponse("playTTS", false, "TTS not available - Car SDK not initialized");
+                sendCommandResponse("playTTS", false, "TTS not available - Car SDK not initialized", commandId);
             }
 
         } catch (Exception e) {
             Log.e(TAG, "Failed to play TTS: " + e.getMessage(), e);
-            sendCommandResponse("playTTS", false, "Failed to play TTS: " + e.getMessage());
+            sendCommandResponse("playTTS", false, "Failed to play TTS: " + e.getMessage(), commandId);
         }
     }
 
@@ -2102,11 +2169,11 @@ public class ServerCommunicationService extends Service {
             startContinuousAudioStreaming();
 
             Log.i(TAG, "Two-way audio started");
-            sendCommandResponse("startTwoWayAudio", true, "Two-way audio communication started");
+            sendCommandResponse("startTwoWayAudio", true, "Two-way audio communication started", null);
 
         } catch (Exception e) {
             Log.e(TAG, "Failed to start two-way audio: " + e.getMessage(), e);
-            sendCommandResponse("startTwoWayAudio", false, "Failed to start two-way audio: " + e.getMessage());
+            sendCommandResponse("startTwoWayAudio", false, "Failed to start two-way audio: " + e.getMessage(), null);
         }
     }
 
@@ -2121,11 +2188,11 @@ public class ServerCommunicationService extends Service {
             stopAudioPlayback();
 
             Log.i(TAG, "Two-way audio stopped");
-            sendCommandResponse("stopTwoWayAudio", true, "Two-way audio communication stopped");
+            sendCommandResponse("stopTwoWayAudio", true, "Two-way audio communication stopped", null);
 
         } catch (Exception e) {
             Log.e(TAG, "Failed to stop two-way audio: " + e.getMessage(), e);
-            sendCommandResponse("stopTwoWayAudio", false, "Failed to stop two-way audio: " + e.getMessage());
+            sendCommandResponse("stopTwoWayAudio", false, "Failed to stop two-way audio: " + e.getMessage(), null);
         }
     }
 
