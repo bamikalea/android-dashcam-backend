@@ -1,77 +1,153 @@
-# Dashcam Fleet Management App
+# Android Dashcam & Fleet Management System
 
-A headless Android application for fleet management using a vendor-provided dashcam SDK.
+This project has been reorganized into two main components for better clarity and separation of concerns.
 
-## Features
-
-- **Background Services**: Fleet management, location tracking, and dashcam event handling
-- **Dashcam Integration**: Direct control via vendor SDK (`libcarMotion.so`)
-- **Server Communication**: RESTful API integration for fleet data
-- **Location Tracking**: GPS-based vehicle location monitoring
-- **Event Handling**: Dashcam event detection and processing
-
-## Project Structure
+## 📁 Project Structure
 
 ```
-app/
-├── src/main/java/com/fleetmanagement/
-│   ├── models/           # Data models
-│   ├── receivers/        # Broadcast receivers
-│   ├── services/         # Background services
-│   └── viewmodels/       # ViewModels for UI
-├── libs/
-│   ├── armeabi/
-│   │   └── libcarMotion.so  # Dashcam SDK library
-│   ├── okhttp-3.4.1.jar     # HTTP client (SDK compatible)
-│   └── okio-1.10.0.jar      # I/O library (SDK compatible)
-└── res/                  # Resources
+andorid SDk/
+├── android-fleet-management/     # Custom Android app + REST backend
+│   ├── android-app/             # Custom fleet management APK
+│   ├── backend-server/          # RESTful HTTP(S) backend (TODO)
+│   └── README.md               # Fleet management documentation
+│
+├── jt808-protocol-server/       # JT808 protocol server + dashboard
+│   ├── jt808-server/           # Java JT808 protocol server
+│   ├── dashboard/              # React web dashboard
+│   └── README.md               # JT808 protocol documentation
+│
+└── README.md                   # This file
 ```
 
-## Dependencies
+## 🚀 Quick Start
 
-- **Android SDK**: API 26+ (Android 8.0+)
-- **Dashcam SDK**: `libcarMotion.so` (vendor-provided)
-- **Network**: OkHttp 3.4.1, Retrofit 2.9.0
-- **Database**: Room 2.5.1
-- **Location**: Google Play Services Location 21.0.1
+### Option 1: Custom Android Fleet Management
 
-## Building
+```bash
+cd android-fleet-management
+# See android-fleet-management/README.md for detailed instructions
+```
 
-1. **Sync Project**: In Android Studio, go to `File > Sync Project with Gradle Files`
-2. **Build APK**: `Build > Build Bundle(s) / APK(s) > Build APK(s)`
-3. **Install**: Transfer APK to dashcam device and install
+### Option 2: JT808 Protocol Server & Dashboard
 
-## Configuration
+```bash
+cd jt808-protocol-server
+# See jt808-protocol-server/README.md for detailed instructions
+```
 
-- **Server URL**: Configure in `ServerConfig.java`
-- **Location Updates**: Adjust frequency in `LocationTrackingService.java`
-- **Event Handling**: Customize in `DashcamEventReceiver.java`
+## 📋 System Overview
 
-## Installation on Dashcam
+### 1. Android Fleet Management System
 
-1. Enable "Install from Unknown Sources" in device settings
-2. Transfer APK to device storage
-3. Install using file manager or ADB
-4. Grant necessary permissions (location, storage, etc.)
-5. App runs automatically on boot via `BootReceiver`
+- **Purpose**: Custom Android app for fleet management with HTTP(S) communication
+- **Communication**: REST APIs over HTTP(S)
+- **Deployment**: Compatible with Render, Heroku, AWS, etc.
+- **Features**: Location tracking, dashcam integration, cloud storage
 
-## Troubleshooting
+### 2. JT808 Protocol Server & Dashboard
 
-- **Build Errors**: Ensure all SDK files are in `app/libs/`
-- **Runtime Errors**: Check device logs with `adb logcat`
-- **Permission Issues**: Verify all required permissions in `AndroidManifest.xml`
+- **Purpose**: Full JT808/JT1078 protocol implementation for hardware dashcams
+- **Communication**: Raw TCP/UDP protocol (port 7100)
+- **Deployment**: Requires VPS with public IP access
+- **Features**: Protocol compliance, device management, web dashboard
 
-## SDK Compatibility
+## 🔄 Communication Comparison
 
-This app uses the vendor-provided dashcam SDK with compatible library versions:
+| Aspect               | Android Fleet Management | JT808 Protocol Server |
+| -------------------- | ------------------------ | --------------------- |
+| **Protocol**         | HTTP(S) REST APIs        | Raw TCP/UDP (JT808)   |
+| **Port**             | 80/443 (HTTP/HTTPS)      | 7100 (TCP/UDP)        |
+| **Deployment**       | Any HTTP host            | VPS with public IP    |
+| **Devices**          | Android phones/tablets   | Hardware dashcams     |
+| **Real-time**        | WebSocket/SSE            | Native protocol       |
+| **Cloud Compatible** | ✅ Yes                   | ❌ Limited            |
 
-- OkHttp 3.4.1 (not 4.x to maintain SDK compatibility)
-- Okio 1.10.0 (not 2.x to maintain SDK compatibility)
-- No Kotlin stdlib conflicts (pure Java implementation)
+## 🎯 Use Cases
 
-## License
+### Choose Android Fleet Management if:
 
-This project is proprietary software. All rights reserved.
+- You want to use Android devices as dashcams
+- You prefer HTTP(S) communication
+- You want cloud deployment (Render, Heroku, etc.)
+- You need REST API integration
+- You want easier setup and maintenance
+
+### Choose JT808 Protocol Server if:
+
+- You have hardware JT808 dashcam devices
+- You need full protocol compliance
+- You have access to a VPS with public IP
+- You need advanced device management
+- You want protocol-level control
+
+## 🛠️ Development
+
+### Prerequisites
+
+- **Android Fleet Management**: Android Studio, Java 8+, Node.js
+- **JT808 Protocol Server**: Java 11+, Maven/Gradle, Node.js
+
+### Building
+
+```bash
+# Android Fleet Management
+cd android-fleet-management/android-app
+./gradlew build
+
+# JT808 Protocol Server
+cd jt808-protocol-server/jt808-server
+./gradlew build
+
+# Dashboard
+cd jt808-protocol-server/dashboard
+npm install && npm run build
+```
+
+## 📚 Documentation
+
+- [Android Fleet Management Guide](android-fleet-management/README.md)
+- [JT808 Protocol Server Guide](jt808-protocol-server/README.md)
+- [Fleet Management Setup](android-fleet-management/FLEET_MANAGEMENT_SETUP.md)
+
+## 🔧 Configuration
+
+### Android Fleet Management
+
+Update `android-fleet-management/android-app/app/src/main/java/com/fleetmanagement/custom/config/ServerConfig.java`:
+
+```java
+public static final String BASE_URL = "https://your-backend-server.com";
+```
+
+### JT808 Protocol Server
+
+Update `jt808-protocol-server/jt808-server/jtt808-server/src/main/resources/application.yml`:
+
+```yaml
+jt-server:
+  jt808:
+    port:
+      tcp: 7100
+      udp: 7100
+```
+
+## 🚨 Important Notes
+
+1. **Deployment Limitations**: JT808 protocol requires VPS with public IP access
+2. **Protocol Compatibility**: Hardware dashcams use JT808, Android apps use HTTP(S)
+3. **Cloud Hosting**: Only Android fleet management works with Render/Heroku
+4. **Port Requirements**: JT808 needs port 7100, HTTP(S) uses standard ports
+
+## 🤝 Contributing
+
+Each system is self-contained. Choose the appropriate folder based on your needs:
+
+- For Android app development: `android-fleet-management/`
+- For JT808 protocol work: `jt808-protocol-server/`
+
+## 📄 License
+
+This project contains multiple components. See individual README files for specific licensing information.
 
 ---
 
