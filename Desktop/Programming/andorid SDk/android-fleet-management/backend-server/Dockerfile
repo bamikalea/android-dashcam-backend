@@ -1,7 +1,5 @@
-# Use Node.js runtime
 FROM node:18-alpine
 
-# Set the working directory
 WORKDIR /app
 
 # Copy package files
@@ -10,14 +8,14 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci --only=production
 
-# Copy application files
+# Copy source code
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p logs uploads uploads/thumbnails
+# Create uploads directory
+RUN mkdir -p uploads
 
-# Expose the port (Render will map this to $PORT)
-EXPOSE 3000
+# Expose port
+EXPOSE 10000
 
-# Start the server
+# Start the application
 CMD ["npm", "start"] 

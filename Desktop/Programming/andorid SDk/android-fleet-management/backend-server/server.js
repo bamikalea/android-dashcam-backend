@@ -664,6 +664,44 @@ app.get('/api/dashcams/:deviceId/events', (req, res) => {
   });
 });
 
+// Get current location for a device
+app.get('/api/dashcams/:deviceId/location', (req, res) => {
+  const { deviceId } = req.params;
+  const dashcam = dashcamData.get(deviceId);
+  
+  if (!dashcam) {
+    return res.status(404).json({ 
+      error: 'Device not found',
+      deviceId 
+    });
+  }
+  
+  if (!dashcam.location) {
+    return res.status(404).json({ 
+      error: 'No location data available for this device',
+      deviceId 
+    });
+  }
+  
+  res.json({ 
+    deviceId,
+    location: dashcam.location,
+    lastSeen: dashcam.lastSeen,
+    status: dashcam.status
+  });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'healthy',
+    timestamp: new Date(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    activeConnections: Object.keys(io.sockets.sockets).length
+  });
+});
+
 // Start server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
