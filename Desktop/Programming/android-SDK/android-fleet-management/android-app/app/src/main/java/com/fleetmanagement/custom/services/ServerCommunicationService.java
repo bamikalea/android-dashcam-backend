@@ -350,8 +350,7 @@ public class ServerCommunicationService extends Service {
             Log.d(TAG, "Device ID: " + deviceId);
             Log.d(TAG, "Server URL: " + API_BASE_URL);
 
-            String endpoint = String.format("/dashcams/%s/commands", deviceId);
-            String url = API_BASE_URL + endpoint;
+            String url = ServerConfig.getCommandsUrl(deviceId);
 
             Log.d(TAG, "Polling URL: " + url);
 
@@ -599,15 +598,14 @@ public class ServerCommunicationService extends Service {
             @Override
             public void run() {
                 try {
-                    String endpoint = "/dashcams/register";
-                    String url = API_BASE_URL + endpoint;
+                    String url = ServerConfig.getRegisterUrl();
 
                     Log.d(TAG, "Registration URL: " + url);
 
                     // Create registration payload
                     JSONObject registrationData = new JSONObject();
                     registrationData.put("deviceId", deviceId);
-                    registrationData.put("deviceType", "android_dashcam");
+                    registrationData.put("model", "Android Dashcam");
                     registrationData.put("version", "1.0");
                     registrationData.put("timestamp", System.currentTimeMillis());
 
@@ -661,8 +659,7 @@ public class ServerCommunicationService extends Service {
             Log.d(TAG, "Device ID: " + deviceId);
             Log.d(TAG, "Server URL: " + API_BASE_URL);
 
-            String endpoint = String.format("/dashcams/%s/status", deviceId);
-            String url = API_BASE_URL + endpoint;
+            String url = ServerConfig.getDeviceStatusUrl(deviceId);
 
             Log.d(TAG, "Status URL: " + url);
 
@@ -676,8 +673,9 @@ public class ServerCommunicationService extends Service {
             sdf.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
 
             JSONObject statusData = new JSONObject();
-            statusData.put("deviceId", deviceId);
             statusData.put("status", "online");
+            statusData.put("batteryLevel", getBatteryLevel());
+            statusData.put("storageAvailable", getAvailableStorage());
             statusData.put("timestamp", sdf.format(new java.util.Date()));
 
             String jsonPayload = statusData.toString();
@@ -1111,8 +1109,7 @@ public class ServerCommunicationService extends Service {
             Log.d(TAG, "Message: " + message);
             Log.d(TAG, "Server URL: " + API_BASE_URL);
 
-            String endpoint = String.format("/dashcams/%s/response", deviceId);
-            String url = API_BASE_URL + endpoint;
+            String url = ServerConfig.getResponseUrl(deviceId);
 
             Log.d(TAG, "Response URL: " + url);
 
@@ -1126,7 +1123,6 @@ public class ServerCommunicationService extends Service {
             sdf.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
 
             JSONObject responseData = new JSONObject();
-            responseData.put("deviceId", deviceId);
             responseData.put("command", command);
             responseData.put("commandId", commandId);
             responseData.put("success", success);
@@ -1233,13 +1229,11 @@ public class ServerCommunicationService extends Service {
             Log.i(TAG, "[LOG] Executing request for: Location Update");
 
             // Use the correct endpoint for location updates
-            String endpoint = String.format("/dashcams/%s/location", deviceId);
-            String url = API_BASE_URL + endpoint;
+            String url = ServerConfig.getLocationUrl(deviceId);
 
             Log.i(TAG, "[LOG] Request URL: " + url);
 
             JsonObject locationData = new JsonObject();
-            locationData.addProperty("device_id", deviceId);
             locationData.addProperty("latitude", location.getLatitude());
             locationData.addProperty("longitude", location.getLongitude());
             locationData.addProperty("altitude", location.getAltitude());
@@ -1356,8 +1350,7 @@ public class ServerCommunicationService extends Service {
             try {
                 Log.d(TAG, "Starting photo upload in background thread");
 
-                String endpoint = String.format("/dashcams/%s/photo", deviceId);
-                String url = API_BASE_URL + endpoint;
+                String url = ServerConfig.getPhotoUrl(deviceId);
 
                 Log.d(TAG, "Upload URL: " + url);
 
@@ -1420,8 +1413,7 @@ public class ServerCommunicationService extends Service {
             try {
                 Log.i(TAG, "Starting video upload in background thread");
 
-                String endpoint = String.format("/dashcams/%s/video", deviceId);
-                String url = API_BASE_URL + endpoint;
+                String url = ServerConfig.getVideoUrl(deviceId);
 
                 Log.i(TAG, "Upload URL: " + url);
 
@@ -1482,7 +1474,6 @@ public class ServerCommunicationService extends Service {
     public void sendHeartbeat() {
         try {
             JsonObject heartbeatData = new JsonObject();
-            heartbeatData.addProperty("device_id", ServerConfig.DEVICE_ID);
             heartbeatData.addProperty("timestamp", System.currentTimeMillis());
             heartbeatData.addProperty("battery_level", getBatteryLevel());
             heartbeatData.addProperty("storage_available", getAvailableStorage());
@@ -1491,13 +1482,14 @@ public class ServerCommunicationService extends Service {
             RequestBody body = RequestBody.create(JSON, json);
 
             Request request = new Request.Builder()
-                    .url(ServerConfig.getHeartbeatUrl())
-                    .addHeader("Authorization", "Bearer " + ServerConfig.API_KEY)
+                    .url(ServerConfig.getHeartbeatUrl(deviceId))
                     .addHeader("Content-Type", "application/json")
+                    .addHeader("User-Agent", "FleetManagement-Android/1.0")
+                    .addHeader("Device-ID", deviceId)
                     .post(body)
                     .build();
 
-            Log.i(TAG, "[LOG] Sending heartbeat to server. URL: " + ServerConfig.getHeartbeatUrl());
+            Log.i(TAG, "[LOG] Sending heartbeat to server. URL: " + ServerConfig.getHeartbeatUrl(deviceId));
             Log.i(TAG, "[LOG] Heartbeat payload: " + json);
             executeRequest(request, "Heartbeat");
 

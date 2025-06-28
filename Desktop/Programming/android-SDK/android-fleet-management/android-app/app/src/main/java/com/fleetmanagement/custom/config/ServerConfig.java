@@ -7,24 +7,27 @@ package com.fleetmanagement.custom.config;
 public class ServerConfig {
 
     // Base server URL - UPDATE THIS WITH YOUR SERVER URL
-    public static final String BASE_URL = "https://e-android-fleet-backend-render.onrender.com/api";
+    public static final String BASE_URL = "https://e-android-fleet-backend-render.onrender.com";
 
     // Alternative: Use HTTP for development (not recommended for production)
     // public static final String BASE_URL = "http://your-fleet-server.com/api";
 
-    // API Endpoints
-    public static final String ENDPOINT_STATUS = "/status";
-    public static final String ENDPOINT_LOCATION = "/location";
-    public static final String ENDPOINT_EVENT = "/event";
-    public static final String ENDPOINT_EMERGENCY = "/emergency";
-    public static final String ENDPOINT_MEDIA = "/media";
-    public static final String ENDPOINT_PHOTO = "/photo";
-    public static final String ENDPOINT_VIDEO = "/video";
-    public static final String ENDPOINT_HEARTBEAT = "/heartbeat";
+    // API Endpoints - Updated to match server structure
+    public static final String ENDPOINT_STATUS = "/api/status";
+    public static final String ENDPOINT_REGISTER = "/api/dashcams/register";
+    public static final String ENDPOINT_DEVICE_STATUS = "/api/dashcams/%s/status";
+    public static final String ENDPOINT_LOCATION = "/api/dashcams/%s/location";
+    public static final String ENDPOINT_EVENTS = "/api/dashcams/%s/events";
+    public static final String ENDPOINT_COMMANDS = "/api/dashcams/%s/commands";
+    public static final String ENDPOINT_RESPONSE = "/api/dashcams/%s/response";
+    public static final String ENDPOINT_HEARTBEAT = "/api/dashcams/%s/heartbeat";
+    public static final String ENDPOINT_MEDIA = "/api/dashcams/%s/media";
+    public static final String ENDPOINT_PHOTO = "/api/dashcams/%s/photo";
+    public static final String ENDPOINT_VIDEO = "/api/dashcams/%s/video";
 
     // Authentication
     public static final String API_KEY = "your-api-key-here";
-    public static final String DEVICE_ID = "dashcam-001"; // Unique device identifier
+    public static final String DEVICE_ID = "13f15b0094dcc44a"; // Unique device identifier
 
     // Upload settings
     public static final int UPLOAD_TIMEOUT = 30000; // 30 seconds
@@ -61,51 +64,72 @@ public class ServerConfig {
     }
 
     /**
+     * Get registration endpoint URL
+     */
+    public static String getRegisterUrl() {
+        return getUrl(ENDPOINT_REGISTER);
+    }
+
+    /**
+     * Get device status endpoint URL
+     */
+    public static String getDeviceStatusUrl(String deviceId) {
+        return getUrl(String.format(ENDPOINT_DEVICE_STATUS, deviceId));
+    }
+
+    /**
      * Get location endpoint URL
      */
-    public static String getLocationUrl() {
-        return getUrl(ENDPOINT_LOCATION);
+    public static String getLocationUrl(String deviceId) {
+        return getUrl(String.format(ENDPOINT_LOCATION, deviceId));
     }
 
     /**
-     * Get event endpoint URL
+     * Get events endpoint URL
      */
-    public static String getEventUrl() {
-        return getUrl(ENDPOINT_EVENT);
+    public static String getEventsUrl(String deviceId) {
+        return getUrl(String.format(ENDPOINT_EVENTS, deviceId));
     }
 
     /**
-     * Get emergency endpoint URL
+     * Get commands endpoint URL
      */
-    public static String getEmergencyUrl() {
-        return getUrl(ENDPOINT_EMERGENCY);
+    public static String getCommandsUrl(String deviceId) {
+        return getUrl(String.format(ENDPOINT_COMMANDS, deviceId));
     }
 
     /**
-     * Get media upload endpoint URL
+     * Get response endpoint URL
      */
-    public static String getMediaUrl() {
-        return getUrl(ENDPOINT_MEDIA);
-    }
-
-    /**
-     * Get photo upload endpoint URL
-     */
-    public static String getPhotoUrl() {
-        return getUrl(ENDPOINT_PHOTO);
-    }
-
-    /**
-     * Get video upload endpoint URL
-     */
-    public static String getVideoUrl() {
-        return getUrl(ENDPOINT_VIDEO);
+    public static String getResponseUrl(String deviceId) {
+        return getUrl(String.format(ENDPOINT_RESPONSE, deviceId));
     }
 
     /**
      * Get heartbeat endpoint URL
      */
-    public static String getHeartbeatUrl() {
-        return getUrl(ENDPOINT_HEARTBEAT);
+    public static String getHeartbeatUrl(String deviceId) {
+        return getUrl(String.format(ENDPOINT_HEARTBEAT, deviceId));
+    }
+
+    /**
+     * Get media upload endpoint URL
+     */
+    public static String getMediaUrl(String deviceId) {
+        return getUrl(String.format(ENDPOINT_MEDIA, deviceId));
+    }
+
+    /**
+     * Get photo upload endpoint URL
+     */
+    public static String getPhotoUrl(String deviceId) {
+        return getUrl(String.format(ENDPOINT_PHOTO, deviceId));
+    }
+
+    /**
+     * Get video upload endpoint URL
+     */
+    public static String getVideoUrl(String deviceId) {
+        return getUrl(String.format(ENDPOINT_VIDEO, deviceId));
     }
 }
