@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: jt808-server
+    env: java
+    buildCommand: mvn clean package -DskipTests -B
+    startCommand: java -jar jtt808-server/target/jtt808-server-1.0.0-SNAPSHOT.jar --spring.profiles.active=render
+    envVars:
+      - key: JAVA_VERSION
+        value: 17
+      - key: PORT
+        value: 8100
+      - key: JT808_TCP_PORT
+        value: 7100
+      - key: JT808_UDP_PORT
+        value: 7100
+      - key: DATABASE_URL
+        value: jdbc:h2:file:./data/jt;auto_server=true;ignorecase=true;mode=mysql
+      - key: DATABASE_USERNAME
+        value: root
+      - key: DATABASE_PASSWORD
+        value: 123
+    healthCheckPath: /actuator/health
+    autoDeploy: true
+    plan: starter

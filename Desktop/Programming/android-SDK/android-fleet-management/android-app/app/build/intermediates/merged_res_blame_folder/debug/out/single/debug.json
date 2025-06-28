@@ -1,0 +1,50 @@
+[
+    {
+        "merged": "com.fleetmanagement.custom.app-merged_res-40:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.fleetmanagement.custom.app-main-42:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.fleetmanagement.custom.app-merged_res-40:/layout_content_main.xml.flat",
+        "source": "com.fleetmanagement.custom.app-main-42:/layout/content_main.xml"
+    },
+    {
+        "merged": "com.fleetmanagement.custom.app-merged_res-40:/drawable_ic_notification.png.flat",
+        "source": "com.fleetmanagement.custom.app-main-42:/drawable/ic_notification.png"
+    },
+    {
+        "merged": "com.fleetmanagement.custom.app-merged_res-40:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "com.fleetmanagement.custom.app-main-42:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.fleetmanagement.custom.app-merged_res-40:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "com.fleetmanagement.custom.app-main-42:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.fleetmanagement.custom.app-merged_res-40:/menu_menu_main.xml.flat",
+        "source": "com.fleetmanagement.custom.app-main-42:/menu/menu_main.xml"
+    },
+    {
+        "merged": "com.fleetmanagement.custom.app-merged_res-40:/layout_activity_m41_serial_port_test.xml.flat",
+        "source": "com.fleetmanagement.custom.app-main-42:/layout/activity_m41_serial_port_test.xml"
+    },
+    {
+        "merged": "com.fleetmanagement.custom.app-merged_res-40:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "com.fleetmanagement.custom.app-main-42:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.fleetmanagement.custom.app-merged_res-40:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "com.fleetmanagement.custom.app-main-42:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.fleetmanagement.custom.app-merged_res-40:/layout_activity_new_camera.xml.flat",
+        "source": "com.fleetmanagement.custom.app-main-42:/layout/activity_new_camera.xml"
+    },
+    {
+        "merged": "com.fleetmanagement.custom.app-merged_res-40:/layout_activity_main.xml.flat",
+        "source": "com.fleetmanagement.custom.app-main-42:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.fleetmanagement.custom.app-merged_res-40:/layout_activity_camera.xml.flat",
+        "source": "com.fleetmanagement.custom.app-main-42:/layout/activity_camera.xml"
+    }
+]

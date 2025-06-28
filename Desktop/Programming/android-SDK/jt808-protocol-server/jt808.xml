@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <int name="overduration" value="0" />
+    <int name="distance" value="15168" />
+    <int name="port" value="7100" />
+    <int name="SP_KEY_DAY_DRIVER_LIMIT_TIME" value="0" />
+    <string name="host2">jt808-jar.onrender.com</string>
+    <string name="host">jt808-jar.onrender.com</string>
+    <int name="overtime" value="14400" />
+    <int name="SP_KEY_LocationReportDistance" value="45" />
+    <int name="overspeed" value="120" />
+    <int name="SP_KEY_OverSpeedDiff" value="0" />
+    <int name="port2" value="7100" />
+</map>

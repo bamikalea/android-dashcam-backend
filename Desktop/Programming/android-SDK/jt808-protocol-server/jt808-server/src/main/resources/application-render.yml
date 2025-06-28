@@ -1,0 +1,80 @@
+spring:
+  application:
+    name: jt808
+  datasource:
+    url: jdbc:h2:file:./data/jt;auto_server=true;ignorecase=true;mode=mysql
+    username: root
+    password: 123
+    driver-class-name: org.h2.Driver
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      minimum-idle: 8
+      maximum-pool-size: 8
+      transaction-isolation: TRANSACTION_READ_COMMITTED
+      data-source-properties:
+        useSSL: false
+        sslMode: disabled
+        serverTimezone: GMT+8
+        characterEncoding: UTF-8
+        zeroDateTimeBehavior: convertToNull
+        allowPublicKeyRetrieval: true
+        cachePrepStmts: true
+        cacheResultSetMetadata: true
+        cacheServerConfiguration: true
+        prepStmtCacheSize: 64
+        prepStmtCacheSqlLimit: 65535
+        useServerPrepStmts: true
+        useLocalTransactionState: true
+        useLocalSessionState: true
+        alwaysSendSetIsolation: false
+        elideSetAutoCommits: true
+        allowMultiQueries: true
+        rewriteBatchedStatements: true
+        enableQueryTimeouts: false
+        maintainTimeStats: false
+        useCompression: false
+  jackson:
+    time-zone: GMT+8
+    date-format: yyyy-MM-dd HH:mm:ss
+  mvc:
+    format:
+      date-time: yyyy-MM-dd HH:mm:ss
+      date: yyyy-MM-dd
+      time: HH:mm:ss
+
+mybatis:
+  configuration:
+    use-generated-keys: true
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  mapper-locations:
+    - classpath:/mapper/*.xml
+
+server:
+  port: ${PORT:8100}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+jt-server:
+  jt808:
+    enable: true
+    port:
+      udp: 7100
+      tcp: 7100
+    media-file:
+      path: ./data/media_file
+    alarm-file:
+      host: 0.0.0.0
+      port: 7200
+
+  alarm-file:
+    enable: true
+    port: 7200
+    path: ./data/alarm_file

@@ -1,0 +1,37 @@
+R_DEF: Internal format may change without notice
+local
+color colorAccent
+color colorPrimary
+color colorPrimaryDark
+dimen activity_horizontal_margin
+dimen activity_vertical_margin
+dimen fab_margin
+drawable ic_notification
+id action_settings
+id btnBack
+id btnDouble
+id btnFront
+id cameraPreview
+id msgshow
+id startLiving
+id stopLiving
+id takepic
+id takevideo
+id tvDisplay
+id view1
+id view2
+id viewfront
+id viewrear
+layout activity_camera
+layout activity_m41_serial_port_test
+layout activity_main
+layout activity_new_camera
+layout content_main
+menu menu_main
+mipmap ic_launcher
+string action_settings
+string app_name
+style AppTheme
+style AppTheme.AppBarOverlay
+style AppTheme.NoActionBar
+style AppTheme.PopupOverlay
