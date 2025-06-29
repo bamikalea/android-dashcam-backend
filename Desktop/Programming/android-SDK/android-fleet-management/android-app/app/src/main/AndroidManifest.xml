@@ -48,6 +48,13 @@
             </intent-filter>
         </activity>
         
+        <!-- Camera Capture Activity for fallback -->
+        <activity
+            android:name="com.fleetmanagement.custom.services.CameraCaptureActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            android:screenOrientation="portrait" />
+        
         <!-- Car SDK Service -->
         <service
             android:name="com.fleetmanagement.custom.services.ServerCommunicationService"

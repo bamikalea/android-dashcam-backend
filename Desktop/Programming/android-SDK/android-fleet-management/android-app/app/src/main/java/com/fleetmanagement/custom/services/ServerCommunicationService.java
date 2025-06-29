@@ -18,6 +18,7 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.Log;
 import android.os.Environment;
+import android.os.Handler;
 
 import androidx.core.app.NotificationCompat;
 
@@ -136,6 +137,21 @@ public class ServerCommunicationService extends Service {
     private static final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
     private static final int BUFFER_SIZE = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT);
 
+    // Camera capture result receiver
+    private BroadcastReceiver cameraCaptureReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if ("CAMERA_CAPTURE_RESULT".equals(intent.getAction())) {
+                boolean success = intent.getBooleanExtra("success", false);
+                String photoPath = intent.getStringExtra("photo_path");
+                String error = intent.getStringExtra("error");
+                String commandId = intent.getStringExtra("command_id");
+
+                handleCameraCaptureResult(success, photoPath, error, commandId);
+            }
+        }
+    };
+
     // Required zero-argument constructor for Android services
     public ServerCommunicationService() {
         this.gson = new Gson();
@@ -172,9 +188,7 @@ public class ServerCommunicationService extends Service {
         Log.i(TAG, "ServerCommunicationService created");
 
         // Initialize device ID
-        if (deviceId == null) {
-            deviceId = getInitialDeviceId();
-        }
+        deviceId = getInitialDeviceId();
 
         // Clear APN proxy settings to ensure direct connections
         clearApnProxySettings();
@@ -182,13 +196,18 @@ public class ServerCommunicationService extends Service {
         // Start foreground service
         startForegroundServiceWithNotification();
 
-        // Initialize services
+        // Initialize hardware control service
         initializeHardwareControl();
+
+        // Initialize location service
         initializeLocationService();
+
+        // Initialize audio components
         initializeAudio();
 
-        // Start polling for commands
-        startPollingForCommands();
+        // Register camera capture result receiver
+        IntentFilter filter = new IntentFilter("CAMERA_CAPTURE_RESULT");
+        registerReceiver(cameraCaptureReceiver, filter);
 
         // Set up restart alarm
         setupRestartAlarm();
@@ -239,6 +258,13 @@ public class ServerCommunicationService extends Service {
     public void onDestroy() {
         Log.w(TAG, "Service being destroyed - attempting restart");
 
+        // Unregister camera capture result receiver
+        try {
+            unregisterReceiver(cameraCaptureReceiver);
+        } catch (Exception e) {
+            Log.w(TAG, "Error unregistering camera capture receiver", e);
+        }
+
         // Release wake lock
         if (wakeLock != null && wakeLock.isHeld()) {
             wakeLock.release();
@@ -265,6 +291,9 @@ public class ServerCommunicationService extends Service {
 
             // Register with server
             registerWithServer();
+
+            // Start connection monitoring
+            startConnectionMonitoring();
 
             // After initializing the socket connection (pseudo-code, adapt as needed):
             if (socket != null) {
@@ -305,6 +334,58 @@ public class ServerCommunicationService extends Service {
 
         } catch (Exception e) {
             Log.e(TAG, "Error initializing connection", e);
+        }
+    }
+
+    private void startConnectionMonitoring() {
+        // Monitor connection status and auto-reconnect if needed
+        pollingExecutor.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                executorService.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        checkConnectionStatus();
+                    }
+                });
+            }
+        }, 60, 60, TimeUnit.SECONDS); // Check every minute
+    }
+
+    private void checkConnectionStatus() {
+        try {
+            Log.d(TAG, "=== CHECKING CONNECTION STATUS ===");
+
+            // Check if we're still registered with the server
+            String url = ServerConfig.getDeviceStatusUrl(deviceId);
+
+            Request request = new Request.Builder()
+                    .url(url)
+                    .addHeader("User-Agent", "FleetManagement-Android/1.0")
+                    .addHeader("Device-ID", deviceId)
+                    .get()
+                    .build();
+
+            try (Response response = client.newCall(request).execute()) {
+                if (response.isSuccessful()) {
+                    Log.d(TAG, "Connection status check successful");
+                    isRegistered = true;
+                } else {
+                    Log.w(TAG, "Connection status check failed: " + response.code());
+                    isRegistered = false;
+
+                    // Try to re-register
+                    Log.i(TAG, "Attempting to re-register with server...");
+                    registerWithServer();
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking connection status", e);
+            isRegistered = false;
+
+            // Try to re-register
+            Log.i(TAG, "Attempting to re-register with server after error...");
+            registerWithServer();
         }
     }
 
@@ -631,15 +712,21 @@ public class ServerCommunicationService extends Service {
                         if (response.isSuccessful()) {
                             String responseBody = response.body().string();
                             Log.i(TAG, "=== REGISTRATION SUCCESS ===");
-                            Log.i(TAG, "Registration response: " + responseBody);
+                            Log.i(TAG, "Response: " + responseBody);
                             isRegistered = true;
-                            Log.i(TAG, "Device successfully registered with server");
+
+                            // Send initial status after successful registration
+                            sendStatus(null);
+
                         } else {
                             String errorBody = response.body().string();
-                            Log.e(TAG, "=== REGISTRATION FAILED ===");
-                            Log.e(TAG, "Registration failed - Error code: " + response.code());
-                            Log.e(TAG, "Error response: " + errorBody);
+                            Log.w(TAG, "=== REGISTRATION FAILED ===");
+                            Log.w(TAG, "Error code: " + response.code());
+                            Log.w(TAG, "Error response: " + errorBody);
                             isRegistered = false;
+
+                            // Schedule retry
+                            scheduleRegistrationRetry();
                         }
                     }
                 } catch (Exception e) {
@@ -648,9 +735,25 @@ public class ServerCommunicationService extends Service {
                     Log.e(TAG, "Exception details: " + e.getMessage());
                     e.printStackTrace();
                     isRegistered = false;
+
+                    // Schedule retry
+                    scheduleRegistrationRetry();
                 }
             }
         });
+    }
+
+    private void scheduleRegistrationRetry() {
+        // Retry registration after 30 seconds
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!isRegistered) {
+                    Log.i(TAG, "Retrying registration...");
+                    registerWithServer();
+                }
+            }
+        }, 30000);
     }
 
     private void sendStatus(String commandId) {
@@ -820,56 +923,46 @@ public class ServerCommunicationService extends Service {
      * Fallback photo capture using Android Camera API
      */
     private void capturePhotoWithAndroidCamera(String commandId) {
-        Log.d(TAG, "=== FALLBACK PHOTO CAPTURE (Android Camera) ===");
+        Log.w(TAG, "=== FALLBACK PHOTO CAPTURE (Android Camera) ===");
 
         try {
-            // Create a simple photo capture using Android's Camera API
-            // For now, we'll create a placeholder file and send a success response
-            // In a real implementation, you would use Camera2 API or CameraX
+            // Create a temporary file for the photo
+            File photoDir = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "dashcam");
+            if (!photoDir.exists()) {
+                photoDir.mkdirs();
+            }
 
-            String photoDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES).getAbsolutePath();
-            String fileName = "photo_" + System.currentTimeMillis() + ".jpg";
-            String photoPath = photoDir + "/" + fileName;
+            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
+            File photoFile = new File(photoDir, "photo_" + timestamp + ".jpg");
 
-            Log.d(TAG, "Creating placeholder photo at: " + photoPath);
-
-            // Create a simple placeholder image (1x1 pixel JPEG)
-            File photoFile = new File(photoPath);
-            photoFile.getParentFile().mkdirs();
-
-            // Create a minimal JPEG file
-            byte[] jpegData = {
-                    (byte) 0xFF, (byte) 0xD8, // SOI marker
-                    (byte) 0xFF, (byte) 0xE0, // APP0 marker
-                    (byte) 0x00, (byte) 0x10, // Length
-                    (byte) 0x4A, (byte) 0x46, (byte) 0x49, (byte) 0x46, (byte) 0x00, // "JFIF\0"
-                    (byte) 0x01, (byte) 0x01, // Version 1.1
-                    (byte) 0x00, // Units: none
-                    (byte) 0x00, (byte) 0x01, // Density: 1x1
-                    (byte) 0x00, (byte) 0x01,
-                    (byte) 0x00, (byte) 0x00, // No thumbnail
-                    (byte) 0xFF, (byte) 0xDB, // DQT marker
-                    (byte) 0x00, (byte) 0x43, // Length
-                    (byte) 0x00, // Table ID
-                    // ... (simplified JPEG data)
-                    (byte) 0xFF, (byte) 0xD9 // EOI marker
-            };
-
-            java.io.FileOutputStream fos = new java.io.FileOutputStream(photoFile);
-            fos.write(jpegData);
-            fos.close();
-
-            Log.i(TAG, "=== FALLBACK PHOTO CAPTURE SUCCESS ===");
-            Log.i(TAG, "Placeholder photo created at: " + photoPath);
-
-            // Upload the placeholder photo
-            uploadPhoto(photoFile, "remote_command_fallback");
-            sendCommandResponse("takePhoto", true, "Fallback photo captured and uploaded successfully", commandId);
+            // Use Camera2 API for photo capture
+            capturePhotoWithCamera2(photoFile, commandId);
 
         } catch (Exception e) {
-            Log.e(TAG, "=== FALLBACK PHOTO CAPTURE FAILED ===");
-            Log.e(TAG, "Fallback photo capture error: " + e.getMessage(), e);
-            sendCommandResponse("takePhoto", false, "Fallback photo capture failed: " + e.getMessage(), commandId);
+            Log.e(TAG, "Error in camera fallback: " + e.getMessage(), e);
+            sendCommandResponse("takePhoto", false,
+                    "Camera fallback failed: " + e.getMessage(), commandId);
+        }
+    }
+
+    /**
+     * Capture photo using Camera2 API
+     */
+    private void capturePhotoWithCamera2(File photoFile, String commandId) {
+        try {
+            // Create a temporary activity context for camera operations
+            Intent cameraIntent = new Intent(this, CameraCaptureActivity.class);
+            cameraIntent.putExtra("photo_path", photoFile.getAbsolutePath());
+            cameraIntent.putExtra("command_id", commandId);
+            cameraIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(cameraIntent);
+
+            Log.i(TAG, "Started Camera2 capture activity for: " + photoFile.getAbsolutePath());
+
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to start camera capture: " + e.getMessage(), e);
+            sendCommandResponse("takePhoto", false,
+                    "Failed to start camera capture: " + e.getMessage(), commandId);
         }
     }
 
@@ -2393,6 +2486,33 @@ public class ServerCommunicationService extends Service {
                 e.printStackTrace();
             }
         });
+    }
+
+    /**
+     * Handle camera capture result from CameraCaptureActivity
+     */
+    public void handleCameraCaptureResult(boolean success, String photoPath, String error, String commandId) {
+        if (success && photoPath != null) {
+            Log.i(TAG, "=== CAMERA CAPTURE SUCCESS ===");
+            Log.i(TAG, "Photo captured at: " + photoPath);
+
+            File photoFile = new File(photoPath);
+            if (photoFile.exists()) {
+                Log.i(TAG, "Photo file exists, uploading to server...");
+                uploadPhoto(photoFile, commandId != null ? commandId : "camera_fallback");
+                sendCommandResponse("takePhoto", true,
+                        "Photo captured and uploaded successfully (Camera2 fallback)", commandId);
+            } else {
+                Log.e(TAG, "Photo file does not exist at path: " + photoPath);
+                sendCommandResponse("takePhoto", false,
+                        "Photo captured but file not found: " + photoPath, commandId);
+            }
+        } else {
+            Log.e(TAG, "=== CAMERA CAPTURE FAILED ===");
+            Log.e(TAG, "Error: " + error);
+            sendCommandResponse("takePhoto", false,
+                    "Camera capture failed: " + error, commandId);
+        }
     }
 }
 
